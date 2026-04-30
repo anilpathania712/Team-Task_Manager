@@ -20,9 +20,21 @@ exports.createProject = (req, res) => {
       return res.status(500).json({ msg: "Error creating project" });
     }
 
+    const projectId = result.insertId;
+
+    // ⭐ FIX 1: Automatically add the creator to project_members as 'admin'
+    const memberQuery = `
+      INSERT INTO project_members (project_id, user_id, role)
+      VALUES (?, ?, ?)
+    `;
+
+    db.query(memberQuery, [projectId, userId, "admin"], (err2) => {
+      if (err2) console.error("Error adding creator as member:", err2);
+    });
+
     res.json({
       msg: "Project created",
-      projectId: result.insertId
+      projectId
     });
   });
 };
@@ -31,12 +43,16 @@ exports.createProject = (req, res) => {
 exports.getProjects = (req, res) => {
   const userId = req.user.id;
 
+  // ⭐ FIX: Show projects if you created them, are in project_members, OR have a task assigned to you
   const query = `
-    SELECT * FROM projects
-    WHERE created_by = ?
+    SELECT DISTINCT p.*
+    FROM projects p
+    LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = ?
+    LEFT JOIN tasks t ON p.id = t.project_id AND t.assigned_to = ?
+    WHERE p.created_by = ? OR pm.user_id = ? OR t.assigned_to = ?
   `;
 
-  db.query(query, [userId], (err, results) => {
+  db.query(query, [userId, userId, userId, userId, userId], (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ msg: "Error fetching projects" });
@@ -54,8 +70,9 @@ exports.addMember = (req, res) => {
     return res.status(400).json({ msg: "Project ID and User ID required" });
   }
 
+  // ⭐ FIX 3: Use INSERT IGNORE so it doesn't crash if they are already a member
   const query = `
-    INSERT INTO project_members (project_id, user_id, role)
+    INSERT IGNORE INTO project_members (project_id, user_id, role)
     VALUES (?, ?, ?)
   `;
 
