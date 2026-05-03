@@ -4,10 +4,6 @@
 A role-based full-stack task management system built using React, Node.js, Express, and MySQL.
 It allows teams to manage projects, assign tasks, track progress, and monitor dashboards with authentication and role-based access control.
 
-# 🚀 Live Demo
-- Frontend: 
-- Backend: 
-
 # 🧑‍💻 Tech Stack
 ## Frontend
 - React.js
